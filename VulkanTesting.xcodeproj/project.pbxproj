@@ -283,7 +283,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/homebrew/Cellar/glfw/3.3.8/lib,
 					"$(LOCAL_LIBRARY_DIR)/VulkanSDK/1.3.236.0/macOS/lib",
 					/opt/homebrew/lib,
 				);
@@ -297,7 +296,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/homebrew/Cellar/glfw/3.3.8/lib,
 					"$(LOCAL_LIBRARY_DIR)/VulkanSDK/1.3.236.0/macOS/lib",
 					/opt/homebrew/lib,
 				);
