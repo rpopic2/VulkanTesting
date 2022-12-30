@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <optional>
+typedef uint32_t u32;
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -28,6 +29,12 @@ struct QueueFamilyIndices
     {
         return graphicsFamily.has_value() && presentFamily.has_value();
     }
+};
+struct SwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
 };
 
 VkResult CreateDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
@@ -191,6 +198,26 @@ private:
             throw std::runtime_error("failed to create window surface!");
         }
     }
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device)
+    {
+        SwapChainSupportDetails details;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+        u32 formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+        if (formatCount != 0)
+        {
+            details.formats.resize(formatCount);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+        }
+        u32 presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+        if (formatCount != 0)
+        {
+            details.presentModes.resize(formatCount);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+        }
+        return details;
+    }
     void pickPhysicalDevice()
     {
         uint32_t deviceCount = 0;
@@ -217,7 +244,32 @@ private:
     bool isDeviceSuitable(VkPhysicalDevice device)
     {
         QueueFamilyIndices indices = findQueueFamilies(device);
-        return indices.isComplete();
+        bool extensionsSupported = checkDeviceExtensionSupport(device);
+        bool swapChainAdequate = false;
+        if (extensionsSupported)
+        {
+            SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+            swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+        }
+        return indices.isComplete() && extensionsSupported && swapChainAdequate;
+    }
+    const std::vector<const char *> deviceExts{
+        "VK_KHR_portability_subset",
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device)
+    {
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+        std::vector<VkExtensionProperties> availableExts(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExts.data());
+        
+        std::set<std::string> reqExts(deviceExts.begin(), deviceExts.end());
+        for (const auto &ext : availableExts)
+        {
+            reqExts.erase(ext.extensionName);
+        }
+        return reqExts.empty();
     }
     void createLogicalDevice()
     {
@@ -244,10 +296,8 @@ private:
         createInfo.pQueueCreateInfos = queueCreateInfos.data();
         createInfo.pEnabledFeatures = &deviceFeatures;
         
-        std::vector<const char *> exts;
-        exts.emplace_back("VK_KHR_portability_subset");
-        createInfo.enabledExtensionCount = static_cast<uint32_t>( exts.size());
-        createInfo.ppEnabledExtensionNames = exts.data();
+        createInfo.enabledExtensionCount = static_cast<uint32_t>( deviceExts.size());
+        createInfo.ppEnabledExtensionNames = deviceExts.data();
         
         if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
         {
